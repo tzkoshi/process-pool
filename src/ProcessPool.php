@@ -57,9 +57,9 @@ class ProcessPool
     /**
      * Start and wait until all processes finishes
      */
-    public function wait(): void
+    public function wait(?callable $callback = null): void
     {
-        $this->startNextProcesses();
+        $this->startNextProcesses($callback);
 
         while (count($this->running) > 0) {
             /** @var Process $process */
@@ -79,7 +79,7 @@ class ProcessPool
 
                 if (!$isRunning) {
                     unset($this->running[$key]);
-                    $this->startNextProcesses();
+                    $this->startNextProcesses($callback);
 
                     $event = new ProcessFinished($process);
 
@@ -103,13 +103,14 @@ class ProcessPool
     /**
      * Start next processes until fill the concurrency limit
      */
-    private function startNextProcesses(): void
+    private function startNextProcesses(?callable $callback): void
     {
         $concurrency = $this->getConcurrency();
 
         while (count($this->running) < $concurrency && $this->queue->valid()) {
+            /** @var Process $process */
             $process = $this->queue->current();
-            $process->start();
+            $process->start($callback);
 
             $this->dispatchEvent(new ProcessStarted($process));
 
